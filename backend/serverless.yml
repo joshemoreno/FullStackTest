@@ -1,0 +1,17 @@
+service: checkout-app
+frameworkVersion: '3'
+
+provider: ${file(./serverless/provider.yml)}
+
+functions: ${file(./serverless/functions.yml)}
+
+resources: ${file(./serverless/resources.yml)}
+
+plugins:
+  - serverless-esbuild
+
+custom: ${file(./serverless/custom.yml)}
+
+package:
+  patterns:
+    - assets/**

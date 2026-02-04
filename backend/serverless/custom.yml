@@ -1,0 +1,13 @@
+esbuild:
+  bundle: true
+  target: node20
+  platform: node
+  sourcemap: true
+  minify: false
+  external:
+    - class-validator
+    - class-transformer
+    - class-transformer/storage
+    - '@nestjs/microservices'
+    - '@nestjs/microservices/microservices-module'
+    - '@nestjs/websockets/socket-module'

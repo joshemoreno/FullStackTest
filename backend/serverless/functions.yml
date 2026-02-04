@@ -1,0 +1,6 @@
+api:
+  handler: dist/src/lambda.handler
+  events:
+    - httpApi:
+        path: /{proxy+}
+        method: ANY
