@@ -84,7 +84,7 @@ export class CheckoutService {
     });
 
     // Crear reference y signature de integridad SHA256
-    const reference = `TX-${tx.txId}`;
+    const reference = `TX-${randomUUID()}`;
     const signature = ApiPayIntegritySignature({
       reference,
       amount_in_cents: tx.total_in_cents,
