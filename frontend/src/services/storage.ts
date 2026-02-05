@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const KEY = "wompi_front_state_v1";
 
 export type PersistedState = {
-  checkout?: unknown;
-  transaction?: unknown;
+  checkout?: any;
+  transaction?: any;
 };
 
 export function loadState(): PersistedState | undefined {

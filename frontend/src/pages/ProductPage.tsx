@@ -17,7 +17,8 @@ import {
 } from "../features/checkout/checkoutSlice";
 import { setTxId, setPollPath } from "../features/transaction/transactionSlice";
 import type { InitCheckoutRequest } from "../features/checkout/types";
-import { validateCardBasic } from "../features/checkout/validators";
+import { detectBrand, formatCardNumber, sanitizeCardNumber } from "../features/checkout/cardUtils";
+import { validateCustomer, validateDelivery, validateCard, hasErrors } from "../features/checkout/checkoutValidation";
 
 import {
   Alert,
@@ -34,10 +35,10 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  Grid,
   Stack,
   TextField,
   Typography,
+  Grid
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
@@ -45,6 +46,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PersonIcon from "@mui/icons-material/Person";
 
 import { Money } from "../components/Money";
+import { validateCardBasic } from "../features/checkout/validators";
 
 export function ProductPage() {
   const dispatch = useAppDispatch();
@@ -77,9 +79,12 @@ export function ProductPage() {
     !!selectedProduct && selectedProduct.active && selectedProduct.stock > 0;
 
   async function handleContinueToSummary() {
+    const ok = validateAll();
+      if (!ok) return;
+
     if (!initPayload) return;
     const res = await dispatch(initCheckout(initPayload)).unwrap();
-    dispatch(setTxId(res.txId)); // tx inicial
+    dispatch(setTxId(res.txId));
     setSummaryOpen(true);
   }
 
@@ -98,12 +103,30 @@ export function ProductPage() {
       payCheckout({ txId: checkout.initTxId, ...checkout.card })
     ).unwrap();
 
-    dispatch(setTxId(resp.txId)); // tx final
+    dispatch(setTxId(resp.txId));
     dispatch(setPollPath(resp.next?.poll ?? `/transactions/${resp.txId}`));
 
     setSummaryOpen(false);
     dispatch(closeModal());
     nav("/status");
+  }
+
+  const [custErr, setCustErr] = useState<Record<string, string>>({});
+  const [delErr, setDelErr] = useState<Record<string, string>>({});
+  const [cardErr, setCardErr] = useState<Record<string, string>>({});
+
+  const brand = useMemo(() => detectBrand(checkout.card.number), [checkout.card.number]);
+
+  function validateAll() {
+    const cE = validateCustomer(checkout.customer);
+    const dE = validateDelivery(checkout.delivery);
+    const { errors: cardE } = validateCard(checkout.card);
+
+    setCustErr(cE);
+    setDelErr(dE);
+    setCardErr(cardE);
+
+    return !(hasErrors(cE) || hasErrors(dE) || hasErrors(cardE));
   }
 
   return (
@@ -126,22 +149,21 @@ export function ProductPage() {
             const selected = p.productId === selectedProductId;
 
             return (
-              <Grid item xs={12} sm={6} md={4} key={p.productId}>
+              <Grid size={{xs:12, sm:6, md:4 }} key={p.productId}>
                 <Card
                   elevation={selected ? 6 : 1}
                   sx={{
                     height: "100%",
                     border: selected ? "2px solid" : "1px solid",
-                    borderColor: selected ? "grey.900" : "divider",
+                    borderColor: selected ? "grey.400" : "divider",
                     borderRadius: 3,
                     overflow: "hidden",
                   }}
                 >
                   <CardActionArea onClick={() => dispatch(selectProduct(p.productId))}>
-                    {/* Imagen normalizada */}
                     <Box
                       sx={{
-                        bgcolor: "grey.100",
+                        bgcolor: "white",
                         height: 200,
                         display: "flex",
                         alignItems: "center",
@@ -210,7 +232,7 @@ export function ProductPage() {
                   </CardActionArea>
 
                   {/* CTA fijo abajo */}
-                  <Box sx={{ p: 2, pt: 0 }}>
+                  <Box sx={{ p: 2, pt: 4 }}>
                     <Button
                       fullWidth
                       variant="contained"
@@ -244,36 +266,45 @@ export function ProductPage() {
               </Stack>
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <TextField
                     label="Full name"
                     fullWidth
                     value={checkout.customer.fullName}
                     onChange={(e) => dispatch(setCustomer({ fullName: e.target.value }))}
+                    error={!!custErr.fullName}
+                    helperText={custErr.fullName ?? " "}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6 }}>
                   <TextField
                     label="Email"
                     fullWidth
                     value={checkout.customer.email}
+                    error={!!custErr.email}
+                    helperText={custErr.email ?? " "}
                     onChange={(e) => dispatch(setCustomer({ email: e.target.value }))}
+                    autoComplete="email"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6 }}>
                   <TextField
                     label="Phone"
                     fullWidth
                     value={checkout.customer.phone}
                     onChange={(e) => dispatch(setCustomer({ phone: e.target.value }))}
+                    error={!!custErr.phone}
+                    helperText={custErr.phone ?? " "}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12 }}>
                   <TextField
                     label="Legal ID"
                     fullWidth
                     value={checkout.customer.legalId}
                     onChange={(e) => dispatch(setCustomer({ legalId: e.target.value }))}
+                    error={!!custErr.legalId}
+                    helperText={custErr.legalId ?? " "}
                   />
                 </Grid>
               </Grid>
@@ -286,7 +317,7 @@ export function ProductPage() {
               </Stack>
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <TextField
                     label="Address line 1"
                     fullWidth
@@ -294,9 +325,11 @@ export function ProductPage() {
                     onChange={(e) =>
                       dispatch(setDelivery({ addressLine1: e.target.value }))
                     }
+                    error={!!delErr.addressLine1}
+                    helperText={delErr.addressLine1 ?? " "}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12 }}>
                   <TextField
                     label="Address line 2"
                     fullWidth
@@ -306,80 +339,107 @@ export function ProductPage() {
                     }
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6 }} >
                   <TextField
                     label="City"
                     fullWidth
                     value={checkout.delivery.city}
                     onChange={(e) => dispatch(setDelivery({ city: e.target.value }))}
+                    error={!!delErr.city}
+                    helperText={delErr.city ?? " "}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6 }} >
                   <TextField
                     label="Region"
                     fullWidth
                     value={checkout.delivery.region}
                     onChange={(e) => dispatch(setDelivery({ region: e.target.value }))}
+                    error={!!delErr.region}
+                    helperText={delErr.region ?? " "}
                   />
                 </Grid>
               </Grid>
 
               <Divider />
 
-              <Stack direction="row" spacing={1} alignItems="center">
-                <CreditCardIcon fontSize="small" />
-                <Typography fontWeight={700}>Card</Typography>
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CreditCardIcon fontSize="small" />
+                  <Typography fontWeight={700}>Card</Typography>
+                </Stack>
+
+                <Chip
+                  size="small"
+                  label={brand === "UNKNOWN" ? "VISA / MasterCard" : brand}
+                  color={brand === "VISA" ? "primary" : brand === "MASTERCARD" ? "error" : "default"}
+                  variant={brand === "UNKNOWN" ? "outlined" : "filled"}
+                />
               </Stack>
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs:12 }}>
                   <TextField
                     label="Card holder"
                     fullWidth
                     value={checkout.card.card_holder}
-                    onChange={(e) =>
-                      dispatch(setCard({ card_holder: e.target.value }))
-                    }
+                    onChange={(e) => dispatch(setCard({ card_holder: e.target.value }))}
+                    error={!!cardErr.card_holder}
+                    helperText={cardErr.card_holder ?? " "}
+                    autoComplete="cc-name"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12 }}>
                   <TextField
                     label="Number"
                     fullWidth
-                    value={checkout.card.number}
-                    onChange={(e) => dispatch(setCard({ number: e.target.value }))}
+                    value={formatCardNumber(checkout.card.number)}
+                    onChange={(e) => dispatch(setCard({ number: sanitizeCardNumber(e.target.value) }))}
+                    inputProps={{ inputMode: "numeric", maxLength: 23 }} // con espacios
+                    autoComplete="cc-number"
+                    error={!!cardErr.number}
+                    helperText={cardErr.number ?? " "}
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={{xs:4 }}>
                   <TextField
                     label="MM"
                     fullWidth
                     value={checkout.card.exp_month}
                     onChange={(e) =>
-                      dispatch(setCard({ exp_month: e.target.value }))
+                      dispatch(setCard({ exp_month: sanitizeCardNumber(e.target.value).slice(0, 2) }))
                     }
+                    error={!!cardErr.exp}
+                    helperText={cardErr.exp ? " " : " "}
+                    inputProps={{ inputMode: "numeric", maxLength: 2 }}
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={{xs:4 }}>
                   <TextField
                     label="YY"
                     fullWidth
                     value={checkout.card.exp_year}
                     onChange={(e) =>
-                      dispatch(setCard({ exp_year: e.target.value }))
+                      dispatch(setCard({ exp_year: sanitizeCardNumber(e.target.value).slice(0, 2) }))
                     }
+                    error={!!cardErr.exp}
+                    helperText={cardErr.exp ?? " "}
+                    inputProps={{ inputMode: "numeric", maxLength: 2 }}
                   />
                 </Grid>
-                <Grid item xs={4}>
                   <TextField
                     label="CVC"
                     fullWidth
                     value={checkout.card.cvc}
-                    onChange={(e) => dispatch(setCard({ cvc: e.target.value }))}
+                    onChange={(e) =>
+                      dispatch(setCard({ cvc: sanitizeCardNumber(e.target.value).slice(0, 4) }))
+                    }
+                    error={!!cardErr.cvc}
+                    helperText={cardErr.cvc ?? " "}
+                    inputProps={{ inputMode: "numeric", maxLength: 4 }}
+                    autoComplete="cc-csc"
                   />
                 </Grid>
-              </Grid>
-
               {checkout.error && <Alert severity="error">{checkout.error}</Alert>}
             </Stack>
           </DialogContent>

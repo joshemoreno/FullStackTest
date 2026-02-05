@@ -10,7 +10,6 @@ import type {
   PayCheckoutResponse,
   Summary,
 } from "./types";
-// import { setTxId, setPollPath } from "../transaction/transactionSlice";
 
 type State = {
   quantity: number;
