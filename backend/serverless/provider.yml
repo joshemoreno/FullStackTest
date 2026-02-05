@@ -6,6 +6,12 @@ stage: dev
 environment:
   PRODUCTS_TABLE: ${self:service}-products-${sls:stage}
   TRANSACTIONS_TABLE: ${self:service}-transactions-${sls:stage}
+  REGION: ${aws:region}
+  IS_OFFLINE: "false"
+  APIPAY_PRIVATE_KEY: ${env:APIPAY_PRIVATE_KEY}
+  APIPAY_PUBLIC_KEY: ${env:APIPAY_PUBLIC_KEY}
+  APIPAY_BASE_URL: ${env:APIPAY_BASE_URL}
+  APIPAY_INTEGRITY_SECRET: ${env:APIPAY_INTEGRITY_SECRET}
 
 iam:
   role:
