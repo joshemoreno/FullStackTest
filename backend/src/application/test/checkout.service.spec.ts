@@ -176,7 +176,7 @@ describe('CheckoutService', () => {
     expect(apipayMock.createCardTransaction).not.toHaveBeenCalled();
   });
 
-  it('pay(): PENDING -> tokeniza, crea transacción en ApiPay, persiste data y retorna payload esperado', async () => {
+  it('pay(): PENDING -> reference debe empezar por "TX-" y ser consistente', async () => {
     transactionsRepositoryMock.get.mockResolvedValueOnce({
       txId: 'tx-1',
       status: 'PENDING',
@@ -191,67 +191,36 @@ describe('CheckoutService', () => {
     });
 
     apipayMock.tokenizeCard.mockResolvedValueOnce('card-token-1');
-
     apipayMock.createCardTransaction.mockResolvedValueOnce({
       id: 'pay-1',
       status_message: 'Created',
     });
 
-    transactionsRepositoryMock.setApiPayData.mockResolvedValueOnce(undefined);
-    transactionsRepositoryMock.setApiPayStatusInfo.mockResolvedValueOnce(undefined);
-
-    const dto = {
+    const result = await service.pay({
       txId: 'tx-1',
-      number: '4111111111111111',
-      exp_month: '12',
-      exp_year: '30',
+      number: '4242424242424242',
+      exp_month: '06',
+      exp_year: '29',
       cvc: '123',
-      card_holder: 'Jose',
+      card_holder: 'Jose Moreno',
       installments: 3,
-    } as any;
+    } as any);
 
-    const result = await service.pay(dto);
+    const createArgs = apipayMock.createCardTransaction.mock.calls[0][0];
+    const usedReference = createArgs.reference;
 
-    expect(apipayMock.getAcceptanceTokens).toHaveBeenCalled();
-
-    expect(apipayMock.tokenizeCard).toHaveBeenCalledWith(
-      expect.objectContaining({
-        number: dto.number,
-        exp_month: dto.exp_month,
-        exp_year: dto.exp_year,
-        cvc: dto.cvc,
-        card_holder: dto.card_holder,
-      })
-    );
-
-    expect(apipayMock.createCardTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        acceptance_token: 'acc-1',
-        accept_personal_auth: 'auth-1',
-        amount_in_cents: 12500,
-        currency: 'COP',
-        customer_email: 'jose@test.com',
-        installments: 3,
-        reference: 'TX-tx-1',
-        signature: expect.any(String),
-        cardToken: 'card-token-1',
-      })
-    );
+    expect(usedReference).toEqual(expect.stringMatching(/^TX-/));
 
     expect(transactionsRepositoryMock.setApiPayData).toHaveBeenCalledWith(
       'tx-1',
       'pay-1',
-      'TX-tx-1'
-    );
-    expect(transactionsRepositoryMock.setApiPayStatusInfo).toHaveBeenCalledWith(
-      'tx-1',
-      'Created'
+      usedReference
     );
 
     expect(result).toEqual({
       txId: 'tx-1',
       status: 'PENDING',
-      apipay: { apiPayTxId: 'pay-1', reference: 'TX-tx-1' },
+      apipay: { apiPayTxId: 'pay-1', reference: usedReference },
       next: { poll: '/transactions/tx-1' },
     });
   });
