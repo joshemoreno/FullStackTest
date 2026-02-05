@@ -10,7 +10,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "scripts/**/*"]
 }
