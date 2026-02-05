@@ -1,15 +1,20 @@
+import { Injectable } from '@nestjs/common';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { env } from '../../config/env';
 
-const isLocal = process.env.IS_OFFLINE === 'true';
+@Injectable()
+export class DynamoService {
+  readonly doc: DynamoDBDocumentClient;
 
-export const dynamoDocClient = DynamoDBDocumentClient.from(
-  new DynamoDBClient({
-    region: 'us-east-1',
-    endpoint: isLocal ? 'http://localhost:8000' : undefined,
-    credentials: isLocal
-      ? { accessKeyId: 'local', secretAccessKey: 'local' }
-      : undefined,
-  }),
-  { marshallOptions: { removeUndefinedValues: true } }
-);
+  constructor() {
+    const client = new DynamoDBClient({
+      region: env.REGION,
+      endpoint: env.IS_OFFLINE ? env.DYNAMO_ENDPOINT : undefined,
+      credentials: env.IS_OFFLINE ? { accessKeyId: 'local', secretAccessKey: 'local' } : undefined,
+    });
+    this.doc = DynamoDBDocumentClient.from(client, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
+  }
+}

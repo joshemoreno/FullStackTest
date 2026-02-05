@@ -9,6 +9,7 @@ resources: ${file(./serverless/resources.yml)}
 
 plugins:
   - serverless-esbuild
+  - serverless-dotenv-plugin
 
 custom: ${file(./serverless/custom.yml)}
 

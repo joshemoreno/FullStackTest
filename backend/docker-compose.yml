@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+    networks:
+      - backend-net
+
+networks:
+  backend-net:
+
+volumes:
+  dynamodb_data:

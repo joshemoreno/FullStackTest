@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ProductsRepository } from '../infrastructure/dynamo/products.repository';
+import { ProductsRepository } from '../infrastructure/repository/products.repository';
 
 @Injectable()
 export class ProductsService {
