@@ -395,7 +395,7 @@ export function ProductPage() {
                     fullWidth
                     value={formatCardNumber(checkout.card.number)}
                     onChange={(e) => dispatch(setCard({ number: sanitizeCardNumber(e.target.value) }))}
-                    inputProps={{ inputMode: "numeric", maxLength: 23 }} // con espacios
+                    inputProps={{ inputMode: "numeric", maxLength: 23 }}
                     autoComplete="cc-number"
                     error={!!cardErr.number}
                     helperText={cardErr.number ?? " "}
