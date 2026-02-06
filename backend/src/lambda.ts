@@ -12,7 +12,7 @@ let cachedServer: (Handler<any, any> & ConfigureResult<any, any>) | ((arg0: any,
 const swaggerHtml = readFileSync(join(process.cwd(), 'assets','swagger.html'), 'utf8');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log']});
   app.enableCors({ origin: true });
 
   const config = new DocumentBuilder()
@@ -37,6 +37,7 @@ async function bootstrap() {
 }
 
 export const handler = async (event: any, context: Context, callback: Callback<any>) => {
+  context.callbackWaitsForEmptyEventLoop = false;
   cachedServer = cachedServer ?? (await bootstrap());
   return cachedServer(event, context, callback);
 };

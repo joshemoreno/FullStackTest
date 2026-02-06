@@ -1,5 +1,7 @@
 api:
   handler: dist/src/lambda.handler
+  timeout: 29
+  memorySize: 1024
   events:
     - httpApi:
         path: /{proxy+}
