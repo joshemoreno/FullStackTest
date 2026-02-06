@@ -358,7 +358,7 @@ export function StatusPage() {
 function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="text.secondary" component="div">
         {label}
       </Typography>
       <Box>{value}</Box>
@@ -370,7 +370,7 @@ function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string })
   return (
     <Stack direction="row" spacing={1} alignItems="center">
       <Box sx={{ color: "text.secondary" }}>{icon}</Box>
-      <Typography fontWeight={900}>{title}</Typography>
+      <Typography fontWeight={900} >{title}</Typography>
     </Stack>
   );
 }
