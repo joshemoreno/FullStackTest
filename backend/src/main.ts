@@ -2,19 +2,28 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { flattenErrors } from './common/flattenErrors';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({ origin: true, credentials: true });
 
   app.useGlobalPipes(
-  new ValidationPipe({
+    new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (errors) =>
+        new BadRequestException({
+          message: 'Validation failed',
+          errors: flattenErrors(errors),
+        }),
     }),
   );
+
+  app.useGlobalFilters(new AllExceptionsFilter());
   
   const config = new DocumentBuilder()
     .setTitle('Checkout API')

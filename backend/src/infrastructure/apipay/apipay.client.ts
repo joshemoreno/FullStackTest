@@ -1,7 +1,12 @@
-import { ApiPayCreateTxResponse, ApiPayGetTxResponse, ApiPayTokenizeCardResponse } from './../../domain/types/apipay';
 import axios from 'axios';
 import { env } from '../../config/env';
-import { ApiPayMerchantResponse } from '../../domain/types/apipay';
+import {
+  ApiPayCreateTxResponse,
+  ApiPayGetTxResponse,
+  ApiPayMerchantResponse,
+  ApiPayTokenizeCardResponse,
+} from '../../domain/types/apipay';
+import { axiosToHttpException } from '../../common/axios-to-http-exception';
 
 export class ApiPayClient {
   private readonly http = axios.create({
@@ -9,20 +14,25 @@ export class ApiPayClient {
     timeout: 15000,
   });
 
+  constructor() {
+    this.http.interceptors.response.use(
+      (r) => r,
+      (error) => Promise.reject(axiosToHttpException(error, 'ApiPay request failed')),
+    );
+  }
+
   async getAcceptanceTokens(): Promise<{
     acceptance_token: string;
     accept_personal_auth: string;
     permalinks: { terms: string; personalData: string };
   }> {
-    // GET /merchants/:merchant_public_key
     const res = await this.http.get<ApiPayMerchantResponse>(
-      `/merchants/${env.APIPAY_PUBLIC_KEY}`
+      `/merchants/${env.APIPAY_PUBLIC_KEY}`,
     );
 
     return {
       acceptance_token: res.data.data.presigned_acceptance.acceptance_token,
-      accept_personal_auth:
-        res.data.data.presigned_personal_data_auth.acceptance_token,
+      accept_personal_auth: res.data.data.presigned_personal_data_auth.acceptance_token,
       permalinks: {
         terms: res.data.data.presigned_acceptance.permalink,
         personalData: res.data.data.presigned_personal_data_auth.permalink,
@@ -37,11 +47,10 @@ export class ApiPayClient {
     cvc: string;
     card_holder: string;
   }): Promise<string> {
-    // POST /v1/tokens/cards con Bearer PUBLIC KEY
     const res = await this.http.post<ApiPayTokenizeCardResponse>(
       '/tokens/cards',
       input,
-      { headers: { Authorization: `Bearer ${env.APIPAY_PUBLIC_KEY}` } }
+      { headers: { Authorization: `Bearer ${env.APIPAY_PUBLIC_KEY}` } },
     );
     return res.data.data.id;
   }
@@ -58,7 +67,6 @@ export class ApiPayClient {
     installments?: number;
     ip?: string;
   }) {
-    // POST /v1/transactions con Bearer PRIVATE KEY
     const payload = {
       acceptance_token: input.acceptance_token,
       accept_personal_auth: input.accept_personal_auth,
@@ -75,15 +83,11 @@ export class ApiPayClient {
       ip: input.ip,
     };
 
-    
-    try {
-      const res = await this.http.post<ApiPayCreateTxResponse>('/transactions', payload, {
-        headers: { Authorization: `Bearer ${env.APIPAY_PRIVATE_KEY}` },
-      });
-      return res.data.data;
-    } catch (error: any) {
-      throw new Error(`${JSON.stringify(error.response.data)}` );
-    }
+    const res = await this.http.post<ApiPayCreateTxResponse>('/transactions', payload, {
+      headers: { Authorization: `Bearer ${env.APIPAY_PRIVATE_KEY}` },
+    });
+
+    return res.data.data;
   }
 
   async getTransaction(apipayTxId: string) {

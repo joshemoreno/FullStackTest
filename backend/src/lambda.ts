@@ -6,14 +6,32 @@ import { ConfigureResult } from '@codegenie/serverless-express/src/configure';
 import { Callback, Context, Handler } from 'aws-lambda';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { flattenErrors } from './common/flattenErrors';
 
 let cachedServer: (Handler<any, any> & ConfigureResult<any, any>) | ((arg0: any, arg1: any, arg2: any) => any);
 
 const swaggerHtml = readFileSync(join(process.cwd(), 'assets','swagger.html'), 'utf8');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log']});
   app.enableCors({ origin: true });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      exceptionFactory: (errors) =>
+        new BadRequestException({
+          message: 'Validation failed',
+          errors: flattenErrors(errors),
+        }),
+    }),
+  );
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const config = new DocumentBuilder()
     .setTitle('Checkout API')
@@ -37,6 +55,7 @@ async function bootstrap() {
 }
 
 export const handler = async (event: any, context: Context, callback: Callback<any>) => {
+  context.callbackWaitsForEmptyEventLoop = false;
   cachedServer = cachedServer ?? (await bootstrap());
   return cachedServer(event, context, callback);
 };
