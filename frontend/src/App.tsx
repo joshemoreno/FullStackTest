@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProductPage } from "./pages/ProductPage";
 import { StatusPage } from "./pages/StatusPage";
+import { GlobalLoadingOverlay } from "./components/GlobalLoadingOverlay";
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
         <Route path="/status" element={<StatusPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <GlobalLoadingOverlay />
     </BrowserRouter>
   );
 }

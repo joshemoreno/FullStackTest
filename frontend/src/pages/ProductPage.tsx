@@ -19,6 +19,7 @@ import { setTxId, setPollPath } from "../features/transaction/transactionSlice";
 import type { InitCheckoutRequest } from "../features/checkout/types";
 import { detectBrand, formatCardNumber, sanitizeCardNumber } from "../features/checkout/cardUtils";
 import { validateCustomer, validateDelivery, validateCard, hasErrors } from "../features/checkout/checkoutValidation";
+import { withLoading } from "../features/ui/withLoading";
 
 import {
   Alert,
@@ -83,7 +84,7 @@ export function ProductPage() {
       if (!ok) return;
 
     if (!initPayload) return;
-    const res = await dispatch(initCheckout(initPayload)).unwrap();
+    const res = await withLoading(dispatch, () => dispatch(initCheckout(initPayload)).unwrap());
     dispatch(setTxId(res.txId));
     setSummaryOpen(true);
   }
@@ -99,9 +100,9 @@ export function ProductPage() {
       return;
     }
 
-    const resp = await dispatch(
-      payCheckout({ txId: checkout.initTxId, ...checkout.card })
-    ).unwrap();
+    const resp = await withLoading(dispatch, () =>
+      dispatch(payCheckout({ txId: checkout.initTxId!, ...checkout.card })).unwrap()
+    );
 
     dispatch(setTxId(resp.txId));
     dispatch(setPollPath(resp.next?.poll ?? `/transactions/${resp.txId}`));
@@ -498,7 +499,7 @@ export function ProductPage() {
 function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="text.secondary" component="div">
         {label}
       </Typography>
       <Box>{value}</Box>

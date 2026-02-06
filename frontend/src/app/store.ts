@@ -2,12 +2,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import productReducer from "../features/product/productSlice";
 import checkoutReducer from "../features/checkout/checkoutSlice";
 import transactionReducer from "../features/transaction/transactionSlice";
+import uiReducer from "../features/ui/uiSlice";
 import { loadState, saveState } from "../services/storage";
 
 const persisted = loadState();
 
 export const store = configureStore({
   reducer: {
+    ui: uiReducer,
     product: productReducer,
     checkout: checkoutReducer,
     transaction: transactionReducer,
